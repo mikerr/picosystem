@@ -65,13 +65,15 @@ xdir = ydir = 1
 splat = spriteobj()
 fuel = spriteobj()
 fuel.x = 50
-    
+fuelled = 0
+takeoff = 0
+
 aliens = [spriteobj() for i in range(4)]
 for alien in aliens :
     alien.x = random.randrange(SCREENX)
     alien.y = random.randrange(SCREENX)
     
-platforms = [(16,45,20), (45,75,20), (86,26,30), (-10,118,125)]
+platforms = [(16,45,20), (45,75,20), (86,26,30), (-10,118,130)]
 
 def update (ticks) :
     global x,y,xdir,ydir
@@ -99,12 +101,13 @@ def update (ticks) :
     
 def draw (ticks) :
         global x,y,xdir,ydir
+        global fuelled,takeoff
         
         pen(0,0,0)
         clear()   
 
         fuel.y += fuel.ydir
-        if (fuel.ydir > 0) : fuel.ydir += 0.05
+        if (fuel.ydir > 0) : fuel.ydir += 0.02
         
         if (hitplatform(platforms,fuel.x,fuel.y)) :
             fuel.ydir = 0
@@ -155,19 +158,32 @@ def draw (ticks) :
             blit(spritebuffer,35,0,8,8,int(splat.x),int(splat.y),0)
         
         # fuel grabbing and dropping
+        dropzone = 70
         if (not fuel.grabbed and collide(fuel,x,y,10)) : fuel.grabbed = 1
         if (fuel.grabbed) :
                 fuel.x = x
                 fuel.y = y + 8
                 fuel.ydir = 1
-                dropzone = 80
-                if (abs(fuel.x - dropzone) < 5) : fuel.grabbed = 0
-        if (fuel.y > 120) :
-            fuel.x = 100
-            fuel.y = 0
+                if (abs(fuel.x - dropzone) < 5) :
+                    fuel.grabbed = 0
+                    fuel.x = dropzone
+        if (fuel.x == dropzone and fuel.y > 110) :
+            fuelled += 1
+            fuel.x = random.randrange(120)
+            fuel.y = -50
             fuel.ydir = 1
-        blit(spritebuffer,20,32,10,32,80,90)
-        blit(spritebuffer,54,50,12,12,int(fuel.x),int(fuel.y))
+        # rocket    
+        blit(spritebuffer,20,32,10,32,70,90 - takeoff)
+        if (fuelled < 3) :
+            for f in range(fuelled + 1) :
+                blit(spritebuffer,54,50,12,8,70,120 - (f * 8))
+        else :
+                takeoff += 1
+                if (takeoff > 100) :
+                    takeoff = 0
+                    fuelled = 0
+        blit(spritebuffer,54,50,12,8,int(fuel.x),int(fuel.y))
+        
         
         # jetman
         if (xdir > 0) : mirror = HFLIP

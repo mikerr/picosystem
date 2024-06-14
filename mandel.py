@@ -37,35 +37,11 @@ def colorpixel(x,y,c):
     c = clr [c]
     if invertcolors : c = 255 -c
     
-    if not grayscale : 
-        # hsv to rgb
-        h = c
-        s = 255
-        v = 255
-    
-        c =  v * s
-        x1 = c * (1 - abs(((h/60.0) % 2) - 1))
-    
-        c = int(c) >> 12
-        x1 = int(x1) >> 12
-        if 0.0 <= h < 60:
-            rgb = (c, x1, 0)
-        elif 0.0 <= h < 120:
-            rgb = (x1, c, 0)
-        elif 0.0 <= h < 180:
-            rgb = (0, c, x1)
-        elif 0.0 <= h < 240:
-            rgb = (0, x1, c)
-        elif 0.0 <= h < 300:
-            rgb = (x1, 0, c)
-        elif 0.0 <= h < 360:
-            rgb = (c, 0, x1)
-   
-        r,g,b = rgb
-    
-    else : # grayscale
+    if not grayscale :
+        pen (hsv(c / 255,1,1))
+    else : 
         r = g = b = c >> 4
-    pen (r,g,b)
+        pen (r,g,b)
     pixel(x,y)
     
 scale = 1./48

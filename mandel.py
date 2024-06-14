@@ -1,6 +1,9 @@
 # mandelbrot fractal
 
-# move with cursors, Y/A to zoom in/out
+# move with cursors,
+# Y/A to zoom in/out
+# X invert colours
+# B grayscale
 
 import time, math
 WIDTH = HEIGHT = 120
@@ -29,18 +32,47 @@ def mandel(i,res) :
         if (iter < max_iter):
                 c = iter * res
                 colorpixel(j,i,c)
-             
+
 def colorpixel(x,y,c):
-    c = 255- clr [c]
-    r = c >> 4
-    g = b = 0
-    pen(r,g,b)
+    c = clr [c]
+    if invertcolors : c = 255 -c
+    
+    if not grayscale : 
+        # hsv to rgb
+        h = c
+        s = 255
+        v = 255
+    
+        c =  v * s
+        x1 = c * (1 - abs(((h/60.0) % 2) - 1))
+    
+        c = int(c) >> 12
+        x1 = int(x1) >> 12
+        if 0.0 <= h < 60:
+            rgb = (c, x1, 0)
+        elif 0.0 <= h < 120:
+            rgb = (x1, c, 0)
+        elif 0.0 <= h < 180:
+            rgb = (0, c, x1)
+        elif 0.0 <= h < 240:
+            rgb = (0, x1, c)
+        elif 0.0 <= h < 300:
+            rgb = (x1, 0, c)
+        elif 0.0 <= h < 360:
+            rgb = (c, 0, x1)
+   
+        r,g,b = rgb
+    
+    else : # grayscale
+        r = g = b = c >> 4
+    pen (r,g,b)
     pixel(x,y)
     
 scale = 1./48
 cx = -.6
 cy = 0
 invertcolors = 0
+grayscale  = 0
 
 clr= [int(255*((i/255)**12)) for i in range(255,-1,-1)]
 
@@ -64,9 +96,12 @@ while True:
             t_end = time.ticks_ms()
             print(f"resolution {res} in {t_end - t_start} ms")
             res = res // 2
-        
+            
         if button(X) :
             invertcolors = not invertcolors
+            break
+        if button(B) :
+            grayscale = not grayscale
             break
         if button(A) :
             scale = scale * 0.9
@@ -74,15 +109,16 @@ while True:
         if button(Y) :
             scale = scale * 1.1
             break
+        move = scale *5
         if button(LEFT) :
-            cx -= scale
+            cx -= move
             break
         if button(RIGHT) :
-            cx += scale
+            cx += move
             break
         if button(UP) :
-            cy -= scale
+            cy -= move
             break
         if button(DOWN) :
-            cy += scale
+            cy += move
             break

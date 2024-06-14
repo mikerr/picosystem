@@ -38,7 +38,8 @@ def colorpixel(x,y,c):
     if invertcolors : c = 255 -c
     
     if not grayscale :
-        pen (hsv(c / 255,1,1))
+        if c == 0 or c == 255: pen(0,0,0)
+        else: pen (hsv(c / 256,1,1))
     else : 
         r = g = b = c >> 4
         pen (r,g,b)

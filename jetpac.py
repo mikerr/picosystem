@@ -32,24 +32,29 @@ spritebuffer = readbmp ("jetpac.bmp")
 
 SCREENX = 120
 jetman = spriteobj()
+jetman.img = [18,13]
 jetman.h = 12
 
 rocket = spriteobj()
 rocket.img = [20,32]
 rocket.h = 32
 rocket.x = 70
-rocket.y = 115
 
 splat = spriteobj()
 splat.img = [35,0]
 
 fuel = spriteobj()
 fuel.x = 50
-fuel.img = [54,50]
-fuel.w = 12
+fuel.img = [53,50]
+fuel.w = 11
+
+gem = spriteobj()
+gem.img = [53,0]
+gem.w = 10
 
 fuelled = 0
 takeoff = 0
+firing = 0
 
 aliens = [spriteobj() for i in range(4)]
 for alien in aliens :
@@ -59,14 +64,20 @@ for alien in aliens :
     
 platforms = [(16,45,20), (45,75,20), (86,26,30), (-10,118,130)]
 
-def update (ticks) : 
+def update (ticks) :
+    global firing
+    
+    if (button(A)) : firing  = 1
+    else : firing = 0
+        
     if (button(LEFT)):  jetman.xdir -= 1
     if (button(RIGHT)): jetman.xdir += 1
     if (button(X) or button(UP)): jetman.ydir -= 1   
     
      # not too fast
     if (abs(jetman.xdir) > 5): jetman.xdir *= 0.5
-    jetman.xdir *= 0.9
+    if (abs(jetman.ydir) > 5): jetman.ydir *= 0.9
+    jetman.xdir *= 0.8
     # keep on screen / wrap left/right
     if (jetman.x < 0 ): jetman.x = 120
     if (jetman.x > SCREENX) : jetman.x = 0
@@ -86,26 +97,31 @@ def draw (ticks) :
 
         pen(0,0,0)
         clear()   
-
+        gem.y += gem.ydir
+        if (hitplatform(platforms,gem)) : gem.ydir = 0
+        if collide(gem,jetman,10):
+            gem.img[1] = 10 * random.randrange(4) # gems at 0,10,20,30,40
+            gem.x = random.randrange(120)
+            gem.y = -100
+            gem.ydir = 2      
+        blitsprite(spritebuffer,gem)
         fuel.y += fuel.ydir
         if (fuel.ydir > 0) : fuel.ydir += 0.02
-        
-        if (hitplatform(platforms,fuel)) :
-            fuel.ydir = 0
+        if (hitplatform(platforms,fuel)) : fuel.ydir = 0
         if (hitplatform(platforms,jetman)):
-                if (jetman.ydir > 0) : jetman.ydir = 0
-                #else : ydir = 3 #bounce underneath
-                
+                if (jetman.ydir > 0) :
+                    jetman.y -= 1
+                    jetman.ydir = 0
+                else :
+                    jetman.ydir = - jetman.ydir #bounce underneath
+                jetman.img = [8* (int(jetman.x) % 4),0] #walking
+        if (abs(jetman.ydir) > 1) : jetman.img = [18,13]  # flying      
         #laser
-        if (button(A)) : firing  = 1
-        else : firing = 0
-    
         if firing:
             pen(15,15,15)
             for laser in range(5,50):
                 if (jetman.xdir > 1) : laser *= -1;
                 if (random.random() > 0.5) : pixel(int(jetman.x) - laser,int(jetman.y))
-        
         #aliens
         for alien in aliens :
             alien.x += alien.xdir
@@ -131,13 +147,11 @@ def draw (ticks) :
                     else :
                         alien.x = 120
                         alien.xdir = alien.xdir * -1
-            blitsprite(spritebuffer,alien)
-            
+            blitsprite(spritebuffer,alien)      
         #explosions stay on screen for 5 frames    
         if (splat.time  > 0) :
             splat.time -= 1
-            blitsprite(spritebuffer,splat)
-        
+            blitsprite(spritebuffer,splat)  
         # fuel grabbing and dropping
         dropzone = 70
         if (not fuel.grabbed and collide(fuel,jetman,10)) : fuel.grabbed = 1
@@ -154,7 +168,7 @@ def draw (ticks) :
             fuel.y = -50
             fuel.ydir = 1
         # rocket    
-        rocket.y = 115 - takeoff
+        rocket.y = 118 - takeoff
         blitsprite(spritebuffer,rocket)
         if (fuelled < 3) :
             for f in range(fuelled + 1) :
@@ -162,10 +176,10 @@ def draw (ticks) :
         else :
                 takeoff += 1
                 if (takeoff > 100) :
-                    takeoff = 0
-                    fuelled = 0
-        blitsprite(spritebuffer,fuel)
-             
+                    takeoff = fuelled = 0
+                    rocket.img[0] +=8
+                    if (rocket.img[0] > 45): rocket.img[0] = 20
+        blitsprite(spritebuffer,fuel)             
         # jetman
         if (jetman.xdir > 0) : mirror = HFLIP
         else : mirror = 0

@@ -1,13 +1,5 @@
-# jetpac
-
-import time,random
-
 def readbmp(filename):
         # read a 24bit bmp
-        
-        spritebuffer = Buffer(128,128)
-        # set buffer as target for gfx operations e.g. pixel()
-        target(spritebuffer)
         
         def lebytes_to_int(bytes):
             n = 0x00
@@ -22,6 +14,10 @@ def readbmp(filename):
 
         width = lebytes_to_int(img_bytes[18:22])
         height = lebytes_to_int(img_bytes[22:26])
+
+        spritebuffer = Buffer(width,height)
+        # set buffer as target for gfx operations e.g. pixel()
+        target(spritebuffer)
         
         seektostart = f.read(start_pos - 26)
                              
@@ -37,4 +33,3 @@ def readbmp(filename):
         # set gfx buffer back to screen
         target()
         return (spritebuffer)
- 

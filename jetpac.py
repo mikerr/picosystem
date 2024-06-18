@@ -1,70 +1,53 @@
 # jetpac
 
 import time,random
+from readbmp import *
 
-def readbmp(filename):
-        # read a 24bit bmp
-        
-        spritebuffer = Buffer(128,128)
-        # set buffer as target for gfx operations e.g. pixel()
-        target(spritebuffer)
-        
-        def lebytes_to_int(bytes):
-            n = 0x00
-            while len(bytes) > 0:
-                n <<= 8
-                n |= bytes.pop()
-            return int(n)
-
-        f = open(filename, 'rb') 
-        img_bytes = list(bytearray(f.read(26))) # just read header
-        start_pos = lebytes_to_int(img_bytes[10:14])
-
-        width = lebytes_to_int(img_bytes[18:22])
-        height = lebytes_to_int(img_bytes[22:26])
-        
-        seektostart = f.read(start_pos - 26)
-                             
-        for x in range(height):
-            colrow= list(bytearray(f.read(3 * width)))
-            for y in range(width):       
-                #col = lebytes_to_int(list(bytearray(f.read(3))))
-                b,g,r = colrow[y*3:y*3+3]
-                pen(r >> 4,g >> 4,b >> 4)
-                pixel(y//2,(height - x) //2)
-        f.close()
-        
-        # set gfx buffer back to screen
-        target()
-        return (spritebuffer)
-    
 class spriteobj:
     x = y = 0
     xdir = ydir = 0.5
     time = 0
     grabbed = 0
+    img = [0,0]
+    w = h = 8
     
-def collide (obj,x,y,xdistance):
+def collide (obj,sprite,xdistance):
     ydistance = 10
-    if (abs(x - obj.x) < xdistance  and abs(y - obj.y) < ydistance) : return True
+    if (abs(sprite.x - obj.x) < xdistance  and abs(sprite.y - obj.y) < ydistance) : return True
     else : return False
 
-def hitplatform (platforms,x,y):
+def hitplatform (platforms,sprite):
     for p in platforms:
             px,py,width = p
-            if ( (x > px and (x-px) < width) and (abs(py - y - 4) < 4)) : return True
+            if ( (sprite.x > px and (sprite.x-px) < width) and (abs(py - sprite.y - 4) < 4)) : return True
     return False
 
+def blitsprite (spritesheet,sprite,mirror = 0):
+     offset = 0
+     if sprite.h > 8 : offset = 8  - sprite.h
+     blit(spritesheet,sprite.img[0],sprite.img[1],sprite.w,sprite.h,int(sprite.x),int(sprite.y) + offset,sprite.w,sprite.h,mirror)
+    
 # initialize
 spritebuffer = readbmp ("jetpac.bmp")
 
 SCREENX = 120
-x = y = 90
-xdir = ydir = 1
-    
+jetman = spriteobj()
+jetman.h = 12
+
+rocket = spriteobj()
+rocket.img = [20,32]
+rocket.h = 32
+rocket.x = 70
+rocket.y = 115
+
 splat = spriteobj()
+splat.img = [35,0]
+
 fuel = spriteobj()
 fuel.x = 50
+fuel.img = [54,50]
+fuel.w = 12
+
 fuelled = 0
 takeoff = 0
 
@@ -72,47 +55,45 @@ aliens = [spriteobj() for i in range(4)]
 for alien in aliens :
     alien.x = random.randrange(SCREENX)
     alien.y = random.randrange(SCREENX)
+    alien.img = [0,25] 
     
 platforms = [(16,45,20), (45,75,20), (86,26,30), (-10,118,130)]
 
-def update (ticks) :
-    global x,y,xdir,ydir
-
-    if (button(LEFT)): xdir -= 1
-    if (button(RIGHT)): xdir += 1
-    if (button(X) or button(UP)): ydir -= 1   
+def update (ticks) : 
+    if (button(LEFT)):  jetman.xdir -= 1
+    if (button(RIGHT)): jetman.xdir += 1
+    if (button(X) or button(UP)): jetman.ydir -= 1   
     
      # not too fast
-    if (abs(xdir) > 5): xdir *= 0.5
-    xdir *= 0.9
-    # keep on screen
-    if (x < 0 ): x = 120
-    if (x > SCREENX) : x = 0
-    if (y > 110): y = 110
-    if (y < 0) :
-        y = 10
-        ydir = 0
+    if (abs(jetman.xdir) > 5): jetman.xdir *= 0.5
+    jetman.xdir *= 0.9
+    # keep on screen / wrap left/right
+    if (jetman.x < 0 ): jetman.x = 120
+    if (jetman.x > SCREENX) : jetman.x = 0
+    if (jetman.y > 110): jetman.y = 110
+    if (jetman.y < 0) :
+        jetman.y = 10
+        jetman.ydir = 0
         
-    x += xdir 
-    y += ydir
+    jetman.x += jetman.xdir 
+    jetman.y += jetman.ydir
         
     # gravity
-    ydir += 0.4
+    jetman.ydir += 0.4
     
 def draw (ticks) :
-        global x,y,xdir,ydir
         global fuelled,takeoff
-        
+
         pen(0,0,0)
         clear()   
 
         fuel.y += fuel.ydir
         if (fuel.ydir > 0) : fuel.ydir += 0.02
         
-        if (hitplatform(platforms,fuel.x,fuel.y)) :
+        if (hitplatform(platforms,fuel)) :
             fuel.ydir = 0
-        if (hitplatform(platforms,x,y)):
-                if (ydir > 0) : ydir = 0
+        if (hitplatform(platforms,jetman)):
+                if (jetman.ydir > 0) : jetman.ydir = 0
                 #else : ydir = 3 #bounce underneath
                 
         #laser
@@ -122,8 +103,8 @@ def draw (ticks) :
         if firing:
             pen(15,15,15)
             for laser in range(5,50):
-                if (xdir > 1) : laser *= -1;
-                if (random.random() > 0.5) : pixel(int(x) - laser,int(y))
+                if (jetman.xdir > 1) : laser *= -1;
+                if (random.random() > 0.5) : pixel(int(jetman.x) - laser,int(jetman.y))
         
         #aliens
         for alien in aliens :
@@ -131,12 +112,12 @@ def draw (ticks) :
             alien.y += alien.ydir
             dead = 0
             if (alien.x > SCREENX or alien.x < -25) : dead = 1
-            if (hitplatform(platforms,alien.x,alien.y)) : dead = 1
-            if (firing and collide(alien,x,y,50)) : dead = 1
+            if (hitplatform(platforms,alien)) : dead = 1
+            if (firing and collide(alien,jetman,50)) : dead = 1
             # player collides with alien
-            if (collide(alien,x,y,10)) :
-                xdir = alien.xdir * 2
-                ydir = -1
+            if (collide(alien,jetman,10)) :
+                jetman.xdir = alien.xdir * 2
+                jetman.ydir = -1
                 dead = 1
             if (dead) :
                     splat.x = alien.x
@@ -149,20 +130,20 @@ def draw (ticks) :
                         alien.x = -10
                     else :
                         alien.x = 120
-                        alien.xdir = alien.xdir * -1      
-            blit(spritebuffer,0,25,8,8,int(alien.x),int(alien.y))
+                        alien.xdir = alien.xdir * -1
+            blitsprite(spritebuffer,alien)
             
         #explosions stay on screen for 5 frames    
         if (splat.time  > 0) :
             splat.time -= 1
-            blit(spritebuffer,35,0,8,8,int(splat.x),int(splat.y),0)
+            blitsprite(spritebuffer,splat)
         
         # fuel grabbing and dropping
         dropzone = 70
-        if (not fuel.grabbed and collide(fuel,x,y,10)) : fuel.grabbed = 1
+        if (not fuel.grabbed and collide(fuel,jetman,10)) : fuel.grabbed = 1
         if (fuel.grabbed) :
-                fuel.x = x
-                fuel.y = y + 8
+                fuel.x = jetman.x
+                fuel.y = jetman.y + 8
                 fuel.ydir = 1
                 if (abs(fuel.x - dropzone) < 5) :
                     fuel.grabbed = 0
@@ -173,7 +154,8 @@ def draw (ticks) :
             fuel.y = -50
             fuel.ydir = 1
         # rocket    
-        blit(spritebuffer,20,32,10,32,70,90 - takeoff)
+        rocket.y = 115 - takeoff
+        blitsprite(spritebuffer,rocket)
         if (fuelled < 3) :
             for f in range(fuelled + 1) :
                 blit(spritebuffer,54,50,12,8,70,120 - (f * 8))
@@ -182,18 +164,16 @@ def draw (ticks) :
                 if (takeoff > 100) :
                     takeoff = 0
                     fuelled = 0
-        blit(spritebuffer,54,50,12,8,int(fuel.x),int(fuel.y))
-        
-        
+        blitsprite(spritebuffer,fuel)
+             
         # jetman
-        if (xdir > 0) : mirror = HFLIP
+        if (jetman.xdir > 0) : mirror = HFLIP
         else : mirror = 0
-        blit(spritebuffer,0,0,8,12,int(x),int(y)-5,8,12,mirror)
-        
-        # platforms
+        blitsprite(spritebuffer,jetman,mirror)
+        # platforms    
+        pen(0,15,0) # green
         for p in platforms:
             px,py,width = p
-            pen(0,15,0) # green
-            line(px, py, px +width ,py)
+            hline(px, py, width)
         flip()
 start()
